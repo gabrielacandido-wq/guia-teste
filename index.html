@@ -418,7 +418,90 @@ footer a:hover{color:#4ade80;}
   .acc-desc,.acc-dur{display:none;}
   .hero-stats{flex-wrap:wrap;}
   .stat{min-width:45%;}
+  .modal-nav.prev{left:-44px;}
+  .modal-nav.next{right:-44px;}
+  .modal-nav{width:34px;height:34px;font-size:1rem;}
 }
+
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,0.85);
+  align-items:center;justify-content:center;
+  padding:1.5rem;
+  animation:fadeIn 0.2s ease;
+}
+.modal-overlay.open{display:flex;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.modal-box{
+  position:relative;width:100%;max-width:900px;
+  background:#000;border-radius:14px;overflow:hidden;
+  box-shadow:0 24px 64px rgba(0,0,0,0.6);
+}
+.modal-video{position:relative;padding-bottom:56.25%;}
+.modal-video iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
+
+.modal-header{
+  position:absolute;top:0;left:0;right:0;z-index:10;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.75rem 1rem;
+  background:linear-gradient(to bottom,rgba(0,0,0,0.7) 0%,transparent 100%);
+}
+.modal-titulo{
+  font-size:0.85rem;font-weight:500;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;
+}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;border:none;
+  background:rgba(255,255,255,0.15);color:#fff;
+  cursor:pointer;font-size:1rem;display:flex;
+  align-items:center;justify-content:center;
+  transition:background 0.15s;flex-shrink:0;
+}
+.modal-close:hover{background:rgba(255,255,255,0.3);}
+
+.modal-nav{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:40px;height:40px;border-radius:50%;border:none;
+  background:rgba(255,255,255,0.15);color:#fff;
+  cursor:pointer;font-size:1.1rem;display:flex;
+  align-items:center;justify-content:center;
+  transition:background 0.15s;z-index:10;
+}
+.modal-nav:hover{background:rgba(255,255,255,0.3);}
+.modal-nav.prev{left:-52px;}
+.modal-nav.next{right:-52px;}
+.modal-nav:disabled{opacity:0.3;cursor:default;}
+
+.modal-footer{
+  display:flex;align-items:center;justify-content:center;
+  gap:6px;padding:0.75rem;background:#111;
+}
+.modal-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:rgba(255,255,255,0.3);border:none;cursor:pointer;
+  transition:background 0.2s,transform 0.2s;padding:0;
+}
+.modal-dot.active{background:#22c55e;transform:scale(1.3);}
+
+/* Botão expandir em cada vídeo */
+.btn-expandir{
+  position:absolute;bottom:10px;right:10px;z-index:5;
+  display:flex;align-items:center;gap:5px;
+  background:rgba(0,0,0,0.6);color:#fff;border:none;
+  border-radius:6px;padding:5px 10px;font-size:0.75rem;
+  font-family:var(--font);font-weight:500;cursor:pointer;
+  transition:background 0.15s;backdrop-filter:blur(4px);
+}
+.btn-expandir:hover{background:rgba(0,0,0,0.85);}
+.btn-expandir svg{width:13px;height:13px;fill:#fff;flex-shrink:0;}
+
+@media(max-width:640px){
+  .modal-nav.prev{left:-44px;}
+  .modal-nav.next{right:-44px;}
+  .modal-nav{width:34px;height:34px;font-size:1rem;}
+}
+
 </style>
 </head>
 <body>
@@ -1097,6 +1180,24 @@ footer a:hover{color:#4ade80;}
   </div>
 </section>
 
+<!-- MODAL LIGHTBOX -->
+<div class="modal-overlay" id="modalOverlay" onclick="fecharModalFora(event)">
+  <button class="modal-nav prev" id="modalPrev" onclick="navegarModal(-1)">&#8592;</button>
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-titulo" id="modalTitulo"></span>
+      <button class="modal-close" onclick="fecharModal()">&#x2715;</button>
+    </div>
+    <div class="modal-video">
+      <iframe id="modalIframe" src="" title="" frameborder="0"
+        allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+        allowfullscreen></iframe>
+    </div>
+    <div class="modal-footer" id="modalDots"></div>
+  </div>
+  <button class="modal-nav next" id="modalNext" onclick="navegarModal(1)">&#8594;</button>
+</div>
+
 <footer>
   <p>SCTEC &nbsp;·&nbsp; Guia do Aluno · Carreira Tech 2026 &nbsp;·&nbsp;
     <a href="https://sctec.scti.sc.gov.br/" target="_blank">sctec.scti.sc.gov.br</a>
@@ -1105,6 +1206,100 @@ footer a:hover{color:#4ade80;}
 </footer>
 
 <script>
+// ── Dados dos vídeos para o modal ──────────────────────────────
+const VIDEOS = [
+  { titulo: 'O que é o Carreira Tech?',                              src: 'https://player.vimeo.com/video/1189144643?h=087db41c54&badge=0&autopause=0&player_id=0&app_id=58479' },
+  { titulo: 'Palestras e Trilhas Rápidas — como garantir seus pontos', src: 'https://player.vimeo.com/video/1189144750?h=a75763fd92&badge=0&autopause=0&player_id=0&app_id=58479' },
+  { titulo: 'Certificados do Despertar',                              src: 'https://player.vimeo.com/video/1189147143?h=fce9607361&badge=0&autopause=0&player_id=0&app_id=58479' },
+  { titulo: 'Como fazer a matrícula',                                 src: null },
+  { titulo: 'Primeiro acesso ao AVA',                                 src: null },
+  { titulo: 'Recuperando a senha e navegando no AVA',                 src: null },
+  { titulo: 'As avaliações: Desafio Prático e Atividade Regular',    src: 'https://player.vimeo.com/video/1189147166?h=c2fc8357f4&badge=0&autopause=0&player_id=0&app_id=58479' },
+  { titulo: 'Certificado dos Primeiros Passos',                       src: 'https://player.vimeo.com/video/1189150573?h=99c922f307&badge=0&autopause=0&player_id=0&app_id=58479' },
+  { titulo: 'De onde vêm seus pontos — e como maximizá-los',         src: 'https://player.vimeo.com/video/1189150370?h=da45b306b3&badge=0&autopause=0&player_id=0&app_id=58479' },
+  { titulo: 'Fui selecionado — e agora?',                            src: 'https://player.vimeo.com/video/1189150478?h=df692189b7&badge=0&autopause=0&player_id=0&app_id=58479' },
+  { titulo: 'Certificado do Profissionalizar',                        src: 'https://player.vimeo.com/video/1189151614?h=0c70772d9a&badge=0&autopause=0&player_id=0&app_id=58479' },
+];
+
+// Só os que têm vídeo disponível
+const VIDEOS_DISPONIVEIS = VIDEOS.filter(v => v.src);
+let indiceAtual = 0;
+
+function abrirModal(indice) {
+  indiceAtual = indice;
+  renderizarModal();
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.getElementById('modalIframe').src = '';
+  document.body.style.overflow = '';
+}
+
+function fecharModalFora(e) {
+  if (e.target === document.getElementById('modalOverlay')) fecharModal();
+}
+
+function navegarModal(dir) {
+  indiceAtual = (indiceAtual + dir + VIDEOS_DISPONIVEIS.length) % VIDEOS_DISPONIVEIS.length;
+  renderizarModal();
+}
+
+function renderizarModal() {
+  const v = VIDEOS_DISPONIVEIS[indiceAtual];
+  document.getElementById('modalIframe').src = v.src + '&autoplay=1';
+  document.getElementById('modalTitulo').textContent = v.titulo;
+
+  // Dots
+  const dotsEl = document.getElementById('modalDots');
+  dotsEl.innerHTML = '';
+  VIDEOS_DISPONIVEIS.forEach((_, i) => {
+    const d = document.createElement('button');
+    d.className = 'modal-dot' + (i === indiceAtual ? ' active' : '');
+    d.onclick = () => { indiceAtual = i; renderizarModal(); };
+    dotsEl.appendChild(d);
+  });
+
+  // Setas — sempre habilitadas (navegação circular)
+  document.getElementById('modalPrev').disabled = false;
+  document.getElementById('modalNext').disabled = false;
+}
+
+// Fechar com ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') fecharModal();
+  if (e.key === 'ArrowLeft')  { if (document.getElementById('modalOverlay').classList.contains('open')) navegarModal(-1); }
+  if (e.key === 'ArrowRight') { if (document.getElementById('modalOverlay').classList.contains('open')) navegarModal(1); }
+});
+
+// ── Adicionar botão "Expandir" em cada vídeo disponível ───────
+document.addEventListener('DOMContentLoaded', () => {
+  // Mapeia iframes Vimeo para índice no array VIDEOS_DISPONIVEIS
+  const videoWraps = document.querySelectorAll('.video-wrap, .video-box');
+  videoWraps.forEach(wrap => {
+    const iframe = wrap.querySelector('iframe[src*="vimeo"]');
+    if (!iframe) return;
+
+    const src = iframe.getAttribute('src').split('?')[0];
+    const idMatch = src.match(/\/video\/(\d+)/);
+    if (!idMatch) return;
+    const vimeoId = idMatch[1];
+
+    const idx = VIDEOS_DISPONIVEIS.findIndex(v => v.src && v.src.includes(vimeoId));
+    if (idx === -1) return;
+
+    wrap.style.position = 'relative';
+    const btn = document.createElement('button');
+    btn.className = 'btn-expandir';
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> Expandir';
+    btn.onclick = (e) => { e.stopPropagation(); abrirModal(idx); };
+    wrap.appendChild(btn);
+  });
+});
+
+// ── Header scroll + nav ───────────────────────────────────────
 const sections = document.querySelectorAll('section[id]');
 const navLinks  = document.querySelectorAll('nav a');
 window.addEventListener('scroll', () => {
@@ -1114,11 +1309,13 @@ window.addEventListener('scroll', () => {
   navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + cur));
 });
 
+// ── Reveal ───────────────────────────────────────────────────
 const obs = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.06 });
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
+// ── Accordion ────────────────────────────────────────────────
 function toggleAcc(id) {
   const item = document.getElementById(id);
   const body = item.querySelector('.acc-body');
@@ -1133,6 +1330,7 @@ function toggleAcc(id) {
   }
 }
 
+// ── FAQ interno ───────────────────────────────────────────────
 function toggleFi(el) {
   const wasOpen = el.classList.contains('open');
   el.closest('.acc-body-inner').querySelectorAll('.fi').forEach(f => f.classList.remove('open'));
@@ -1142,11 +1340,13 @@ function toggleFi(el) {
   setTimeout(() => { accBody.style.maxHeight = accBody.scrollHeight + 'px'; }, 380);
 }
 
+// ── Mobile menu ───────────────────────────────────────────────
 function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
 function closeMenu()  { document.getElementById('mobileMenu').classList.remove('open'); }
 document.addEventListener('click', e => {
   if (!e.target.closest('#mobileMenu') && !e.target.closest('.hamburger')) closeMenu();
 });
 </script>
+
 </body>
 </html>
